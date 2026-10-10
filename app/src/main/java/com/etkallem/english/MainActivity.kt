@@ -14,6 +14,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import org.json.JSONObject
+import org.json.JSONArray
+import android.speech.tts.Voice
 import java.util.Locale
 
 /** HTML lesson content is bundled locally. No remote pages are loaded. */
@@ -22,6 +24,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var pending: Speech? = null
+    @Volatile private var voicesJson = "[]"
+    private var selectedVoiceName: String? = null
     private val recognitionRequest = 3142
 
     private data class Speech(val phrase: String, val speed: Float, val token: String)
@@ -60,6 +64,31 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val langStatus = tts?.setLanguage(Locale.US)
             ttsReady = langStatus != TextToSpeech.LANG_MISSING_DATA &&
                 langStatus != TextToSpeech.LANG_NOT_SUPPORTED
+            if (ttsReady) {
+                val available = (tts?.voices ?: emptySet<Voice>())
+                    .filter { it.locale.language == "en" }
+                    .sortedWith(compareBy<Voice> { it.isNetworkConnectionRequired }
+                        .thenByDescending { it.quality }
+                        .thenBy { if (it.locale.country == "US") 0 else 1 }
+                        .thenBy { it.name })
+                val chosen = getSharedPreferences("voice_preferences", MODE_PRIVATE)
+                    .getString("chosenVoice", null)
+                val match = available.firstOrNull { it.name == chosen }
+                    ?: available.firstOrNull()
+                if (match != null && tts?.setVoice(match) == TextToSpeech.SUCCESS)
+                    selectedVoiceName = match.name
+                val voicesArray = JSONArray()
+                available.forEach { voice ->
+                    val item = JSONObject()
+                    item.put("id", voice.name)
+                    item.put("locale", voice.locale.toLanguageTag())
+                    item.put("quality", voice.quality)
+                    item.put("network", voice.isNetworkConnectionRequired)
+                    voicesArray.put(item)
+                }
+                voicesJson = voicesArray.toString()
+            }
+
             tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {}
                 override fun onDone(utteranceId: String?) {
@@ -99,6 +128,23 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     inner class VoiceBridge {
+        @JavascriptInterface
+        fun getVoices(): String = voicesJson
+
+        @JavascriptInterface
+        fun currentVoice(): String = selectedVoiceName ?: ""
+
+        @JavascriptInterface
+        fun chooseVoice(name: String) {
+            runOnUiThread {
+                val found = tts?.voices?.firstOrNull { it.name == name && it.locale.language == "en" }
+                if (found != null && tts?.setVoice(found) == TextToSpeech.SUCCESS) {
+                    selectedVoiceName = name
+                    getSharedPreferences("voice_preferences", MODE_PRIVATE)
+                        .edit().putString("chosenVoice", name).apply()
+                }
+            }
+        }
         @JavascriptInterface
         fun speak(text: String, rate: Double, token: String) {
             runOnUiThread {
