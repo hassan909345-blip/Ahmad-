@@ -9,13 +9,14 @@
         </intent>
     </queries>
     <application
-        android:label="اتكلم - المحادثات والمسلسلات"
+        android:label="مشهدك - إنجليزي بالفيديو"
         android:icon="@drawable/ic_launcher"
         android:roundIcon="@drawable/ic_launcher"
         android:allowBackup="true"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name=".VideoActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
