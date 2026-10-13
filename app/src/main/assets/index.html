@@ -392,16 +392,16 @@ function saveWatched(){
 }
 function episodeCard(ep) {
  const isSeen=watchedEpisodes.includes(ep.number);
- return '<article class="mash-ep-card"><div class="mash-ep-head"><span class="mash-ep-number">الحلقة '+String(ep.number).padStart(2,'0')+'</span><span class="mash-ep-tag">'+(isSeen?'✅ شاهدتها':'▶ مشاهدة')+'</span></div>'
+ return '<article class="mash-ep-card"><div class="mash-ep-head"><span class="mash-ep-number">الحلقة '+String(ep.number).padStart(2,'0')+'</span><span class="mash-ep-tag">'+(isSeen?'✅ شاهدتها':ep.driveId?'📁 نسخة Google Drive':'▶ مشاهدة')+'</span></div>'
  +'<h3 lang="en">'+esc(ep.title)+'</h3><strong>'+esc(ep.arTitle)+'</strong><small>'+esc(ep.topic)+'</small>'
  +'<button data-action="videoLesson" data-id="'+(ep.number-1)+'">🎬 افتح الحلقة والتدريب ←</button></article>';
 }
 function episodesPage(){
  const seen=watchedEpisodes.length;
- return title('🎬 إنجليزي بالمشاهد','30 حلقة من مسلسل Extra English عبر روابط مشاهدة خارجية، مع تمارين إنجليزية أصلية لكل حلقة.')
+ return title('🎬 إنجليزي بالمشاهد','الحلقات 1–4 من ملفاتك الأصلية على Google Drive، وباقي الحلقات روابط YouTube حتى تضيف ملفاتها.')
  +'<div class="container">'
  +'<div class="mash-hero"><div style="font-size:34px">🍿</div><h2>اتفرّج، كرّر، واتكلم!</h2><p>كل يوم حلقة صغيرة أو مشهد واحد: شاهد الفيديو، أوقفه بعد جملة، وكررها بصوتك.</p><div class="mash-progress">'+seen+' من 30 حلقة شاهدتها</div></div>'
- +'<div class="info-note">روابط الفيديوهات مستضافة على يوتيوب لدى ناشرين خارجيين؛ توافرها والسماح بعرضها داخل التطبيق يرجع إليهم. هذا التطبيق لا يحتوي ملفات الفيديو أو السكربت الكامل للمسلسل. التمارين الموجودة أسفل كل فيديو مكتوبة خصيصًا للتعلم وليست تفريغًا للمسلسل.</div>'
+ +'<div class="info-note">الحلقات الأربع الأولى مرتبطة بملفات MP4 على حسابك في Google Drive؛ قد تحتاج إلى تسجيل الدخول بحسابك داخل Google Drive لتشغيل الملفات غير المشاركة. باقي روابط الفيديو من YouTube، وتوافرها يعتمد على ناشريها. ملفات الفيديو نفسها ليست مضمنة داخل ملف APK. التمارين الموجودة أسفل كل فيديو مكتوبة خصيصًا للتعلم وليست تفريغًا للمسلسل.</div>'
  +'<div class="mash-episode-grid">'+EPISODE_CATALOG.map(episodeCard).join('')+'</div>'
  +'<button class="start-btn" data-action="scripts" style="width:100%;margin-top:18px">📃 لديك ملفات ترجمة الحلقات؟ أضف SRT/VTT للتدريب على نصوصها</button>'
  +'</div>';
@@ -417,8 +417,8 @@ function videoLessonPage() {
  +'<div class="container"><div class="mash-video-area">'
  +'<div style="font-size:56px">▶️</div><h2 lang="en">'+esc(ep.title)+'</h2><p>'+esc(ep.arTitle)+'</p>'
  +'<p style="font-size:13px">الموضوع: '+esc(ep.topic)+'</p>'
- +'<button class="start-btn" data-action="playVideo" style="width:100%;margin:15px 0">▶ تشغيل الحلقة داخل التطبيق</button>'
- +'<small>تحتاج إلى إنترنت. إذا منع الناشر التشغيل المضمّن يمكنك فتح الفيديو على يوتيوب من مشغّل التطبيق.</small></div>'
+ +'<button class="start-btn" data-action="playVideo" style="width:100%;margin:15px 0">'+(ep.driveId?'📁 تشغيل نسختك الأصلية من Google Drive':'▶ مشاهدة الحلقة من YouTube')+'</button>'
+ +'<small>'+(ep.driveId?'الفيديو من Google Drive الخاص بك ويحتاج إنترنت. إذا لم يعمل داخل التطبيق، افتحه من زر Google Drive في مشغّل الفيديو.':'تحتاج إلى إنترنت. إذا منع الناشر التشغيل المضمّن يمكنك فتح الفيديو على يوتيوب من مشغّل التطبيق.')+'</small></div>'
  +'<button class="toolbar-btn '+(seen?'':'primary')+'" data-action="videoSeen" style="width:100%;margin-top:18px">'+(seen?'✅ شاهدت الحلقة — إلغاء العلامة':'☑️ علّم هذه الحلقة كمشاهَدة')+'</button>'
  +'<div class="section-title" style="margin-top:26px"><h2>🗣️ جمل للتدريب مرتبطة بالموضوع</h2></div>'
  +'<div class="info-note">هذه جمل تعليمية أصلية عن موضوع الحلقة، وليست النص الحرفي لما يقوله الممثلون.</div>'
@@ -430,10 +430,12 @@ function videoLessonPage() {
 function playSceneVideo() {
  const ep=EPISODE_CATALOG[Number(state.videoEpisode)];
  if(!ep)return;
- if(window.AndroidTTS && typeof window.AndroidTTS.playEpisode==='function'){
+ if(ep.driveId && window.AndroidTTS && typeof window.AndroidTTS.playDriveEpisode==='function'){
+  window.AndroidTTS.playDriveEpisode(ep.driveId,'Extra English — الحلقة '+ep.number+': '+ep.title);
+ }else if(window.AndroidTTS && typeof window.AndroidTTS.playEpisode==='function'){
   window.AndroidTTS.playEpisode(ep.youtubeId,'Extra English — Episode '+ep.number+': '+ep.title);
  } else {
-  const link='https://www.youtube.com/watch?v='+encodeURIComponent(ep.youtubeId);
+  const link=ep.driveId?'https://drive.google.com/file/d/'+encodeURIComponent(ep.driveId)+'/view':'https://www.youtube.com/watch?v='+encodeURIComponent(ep.youtubeId);
   const win=window.open(link,'_blank');
   if(!win)location.href=link;
  }
