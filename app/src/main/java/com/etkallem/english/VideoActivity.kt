@@ -27,6 +27,7 @@ import android.widget.VideoView
  */
 class VideoActivity : Activity() {
     private var videoId: String? = null
+    private var driveId: String? = null
     private var webVideo: WebView? = null
     private var localVideo: VideoView? = null
     private var fullscreenView: View? = null
@@ -53,6 +54,7 @@ class VideoActivity : Activity() {
         super.onCreate(savedInstanceState)
         val inputId = intent.getStringExtra("video_id")
         videoId = inputId?.takeIf { Regex("^[A-Za-z0-9_-]{11}$").matches(it) }
+        driveId = intent.getStringExtra("drive_id")?.takeIf { Regex("^[A-Za-z0-9_-]{10,80}$").matches(it) }
         val episodeTitle = intent.getStringExtra("video_title")?.take(90) ?: "تعلم الإنجليزية بالفيديو"
 
         root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(248, 250, 253)) }
@@ -66,20 +68,24 @@ class VideoActivity : Activity() {
         setContentView(root)
 
         column.addView(uiText("🎬 $episodeTitle", 20f, Color.rgb(12, 35, 65)))
-        column.addView(uiText("الفيديو من يوتيوب ويحتاج اتصالًا بالإنترنت. العرض داخل التطبيق متاح عندما يسمح صاحب الفيديو بالتضمين.", 13f, Color.rgb(82, 100, 115)))
+        column.addView(uiText(if (driveId != null) "هذا ملفك الأصلي على Google Drive. تشغيل الفيديو يحتاج الإنترنت والوصول إلى حساب Google الذي يملك الملف." else "الفيديو من يوتيوب ويحتاج اتصالًا بالإنترنت. العرض داخل التطبيق متاح عندما يسمح صاحب الفيديو بالتضمين.", 13f, Color.rgb(82, 100, 115)))
 
         slot = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         column.addView(slot, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(252)))
 
         val buttons = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        buttons.addView(button("🔗 افتح الفيديو على يوتيوب إذا لم يعمل هنا") { openInYouTube() })
+        if (driveId != null) {
+            buttons.addView(button("📁 افتح الحلقة الأصلية في تطبيق Google Drive") { openInDrive() })
+        } else {
+            buttons.addView(button("🔗 افتح الفيديو على يوتيوب إذا لم يعمل هنا") { openInYouTube() })
+        }
         buttons.addView(button("📁 شغّل فيديو عندك على الهاتف (MP4 / WebM)") { selectLocalVideo() })
-        buttons.addView(button("🎬 ارجع للفيديو المتاح أونلاين") { showYouTubePlayer() })
+        buttons.addView(button("🎬 شغّل الحلقة أونلاين مجددًا") { showYouTubePlayer() })
         buttons.addView(button("⬅️ العودة للدروس") { finish() })
         column.addView(buttons)
         column.addView(uiText("يمكنك إيقاف الفيديو وتكرار أي مشهد. ارفع نص الترجمة SRT/VTT من قسم الحوارات في التطبيق للتدرب على جمل الحلقة.", 13f, Color.rgb(82, 100, 115)))
 
-        if (videoId == null) {
+        if (videoId == null && driveId == null) {
             slot.addView(uiText("اختر فيديو من جهازك لتشغيله.", 17f, Color.WHITE))
         } else {
             showYouTubePlayer()
@@ -92,7 +98,9 @@ class VideoActivity : Activity() {
         webVideo?.destroy()
         webVideo = null
         slot.removeAllViews()
-        val id = videoId ?: return
+        val video = videoId
+        val drive = driveId
+        if (video == null && drive == null) return
         val browser = WebView(this)
         browser.settings.javaScriptEnabled = true
         browser.settings.domStorageEnabled = true
@@ -114,6 +122,7 @@ class VideoActivity : Activity() {
                 if (request == null || !request.isForMainFrame) return false
                 val uri = request.url
                 if (uri.host == "www.youtube-nocookie.com" && uri.path?.startsWith("/embed/") == true) return false
+                if (drive != null && uri.scheme == "https" && uri.host in listOf("drive.google.com", "accounts.google.com", "docs.google.com")) return false
                 if (uri.scheme == "https" && uri.host in listOf("www.youtube.com", "m.youtube.com")) {
                     try { startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) { }
                 }
@@ -122,7 +131,14 @@ class VideoActivity : Activity() {
         }
         slot.addView(browser, FrameLayout.LayoutParams(-1, -1))
         webVideo = browser
-        browser.loadUrl("https://www.youtube-nocookie.com/embed/$id?playsinline=1&rel=0")
+        if (drive != null) browser.loadUrl("https://drive.google.com/file/d/$drive/preview")
+        else browser.loadUrl("https://www.youtube-nocookie.com/embed/$video?playsinline=1&rel=0")
+    }
+
+    private fun openInDrive() {
+        val id = driveId ?: return
+        val uri = Uri.parse("https://drive.google.com/file/d/$id/view")
+        try { startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) { }
     }
 
     private fun openInYouTube() {
