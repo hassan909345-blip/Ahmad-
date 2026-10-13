@@ -158,6 +158,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     inner class VoiceBridge {
+        @JavascriptInterface
+        fun playEpisode(id: String, title: String) {
+            if (!Regex("^[A-Za-z0-9_-]{11}$").matches(id)) return
+            runOnUiThread {
+                val intent = Intent(this@MainActivity, VideoActivity::class.java)
+                intent.putExtra("video_id", id)
+                intent.putExtra("video_title", title.take(100))
+                startActivity(intent)
+            }
+        }
+
         private fun transcriptFile() = File(filesDir, "etkallem_imported_dialogues_v1.json")
 
         @JavascriptInterface
