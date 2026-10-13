@@ -7,7 +7,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.etkallem.english.dialogues"
+        applicationId = "com.mashhadak.english.video"
         minSdk = 24
         targetSdk = 34
         versionCode = 23
