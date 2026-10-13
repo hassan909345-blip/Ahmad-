@@ -13,6 +13,9 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.ValueCallback
+import android.net.Uri
+import java.io.File
 import org.json.JSONObject
 import org.json.JSONArray
 import android.speech.tts.Voice
@@ -27,6 +30,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     @Volatile private var voicesJson = "[]"
     private var selectedVoiceName: String? = null
     private val recognitionRequest = 3142
+    private val transcriptRequest = 3143
+    private var pendingFiles: ValueCallback<Array<Uri>>? = null
 
     private data class Speech(val phrase: String, val speed: Float, val token: String)
 
@@ -47,7 +52,32 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         web.settings.allowFileAccessFromFileURLs = false
         web.settings.allowUniversalAccessFromFileURLs = false
         web.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
-        web.webChromeClient = WebChromeClient()
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                view: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                params: FileChooserParams?
+            ): Boolean {
+                pendingFiles?.onReceiveValue(null)
+                pendingFiles = filePathCallback
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                    putExtra(Intent.EXTRA_MIME_TYPES,
+                        arrayOf("text/plain", "text/vtt", "application/x-subrip", "application/octet-stream"))
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                }
+                return try {
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(intent, transcriptRequest)
+                    true
+                } catch (e: Exception) {
+                    pendingFiles?.onReceiveValue(null)
+                    pendingFiles = null
+                    false
+                }
+            }
+        }
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 return request?.url?.toString()?.startsWith("file:///android_asset/") != true
@@ -128,6 +158,34 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     inner class VoiceBridge {
+        private fun transcriptFile() = File(filesDir, "etkallem_imported_dialogues_v1.json")
+
+        @JavascriptInterface
+        fun loadScripts(): String = try {
+            val file = transcriptFile()
+            if (file.exists() && file.length() <= 16_000_000) file.readText(Charsets.UTF_8)
+            else "[]"
+        } catch (e: Exception) {
+            "[]"
+        }
+
+        @JavascriptInterface
+        fun saveScripts(value: String): Boolean = try {
+            if (value.length > 14_000_000 || !value.trimStart().startsWith("[")) false
+            else {
+                org.json.JSONArray(value)
+                val file = transcriptFile()
+                val temp = File(filesDir, "etkallem_imported_dialogues_tmp.json")
+                temp.writeText(value, Charsets.UTF_8)
+                if (!temp.renameTo(file)) {
+                    temp.copyTo(file, overwrite = true)
+                    temp.delete()
+                }
+                true
+            }
+        } catch (e: Exception) {
+            false
+        }
         @JavascriptInterface
         fun getVoices(): String = voicesJson
 
@@ -183,6 +241,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     @Deprecated("Uses Activity result for compatibility with API 24+")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == transcriptRequest) {
+            val picked = mutableListOf<Uri>()
+            if (resultCode == RESULT_OK) {
+                data?.clipData?.let { clip ->
+                    for (i in 0 until clip.itemCount) picked.add(clip.getItemAt(i).uri)
+                }
+                data?.data?.let { if (it !in picked) picked.add(it) }
+            }
+            pendingFiles?.onReceiveValue(if (picked.isEmpty()) null else picked.toTypedArray())
+            pendingFiles = null
+            return
+        }
         if (requestCode != recognitionRequest) return
         if (resultCode == RESULT_OK) {
             val result = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
@@ -209,6 +279,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onDestroy() {
         tts?.stop()
         tts?.shutdown()
+        pendingFiles?.onReceiveValue(null)
+        pendingFiles = null
         if (::web.isInitialized) {
             web.removeJavascriptInterface("AndroidTTS")
             web.destroy()
