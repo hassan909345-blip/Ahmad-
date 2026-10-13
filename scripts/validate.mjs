@@ -5,9 +5,19 @@ const html = readFileSync('app/src/main/assets/index.html', 'utf8');
 const supplementary = readFileSync('app/src/main/assets/telecom-data.js', 'utf8');
 const stories = readFileSync('app/src/main/assets/stories-data.js', 'utf8');
 const importer = readFileSync('app/src/main/assets/importer.js', 'utf8');
+const episodeVideos = readFileSync('app/src/main/assets/series-episodes.js', 'utf8');
+const availableVideos = new Function('const window = {};\n' + episodeVideos + '\nreturn window.MASHHADAK_EPISODES;')();
+assert.equal(availableVideos.length, 30, 'Expected 30 linked Extra English episodes');
+assert.equal(new Set(availableVideos.map(x=>x.youtubeId)).size, 30, 'Video IDs must be unique');
+for (const entry of availableVideos) {
+ assert.ok(/^[a-zA-Z0-9_-]{11}$/.test(entry.youtubeId), 'Bad YouTube ID: '+entry.number);
+ assert.equal(entry.exercises.length, 3, 'Every episode should have three original teaching expressions');
+}
+
 new Function('const window={};\n' + supplementary);
 new Function('const window={};\n' + stories);
 new Function('const window={};\n' + importer);
+new Function('const window={};\n' + episodeVideos);
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(x => x[1]).filter(x => x.trim().length > 0);
 assert.ok(scripts.length >= 2, 'Expected course data and app scripts');
 for (const [index, script] of scripts.entries()) {
@@ -42,3 +52,4 @@ const txt = p('A: Hello! | أهلاً!\nB: Welcome! | مرحباً!', 'episode.t
 assert.equal(txt.turns.length, 2);
 assert.equal(txt.turns[0].ar, 'أهلاً!');
 console.log('Subtitle import tests passed: SRT / VTT / TXT');
+console.log('Thirty linked external videos and all original study exercises checked.');
