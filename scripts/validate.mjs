@@ -9,6 +9,8 @@ const episodeVideos = readFileSync('app/src/main/assets/series-episodes.js', 'ut
 const availableVideos = new Function('const window = {};\n' + episodeVideos + '\nreturn window.MASHHADAK_EPISODES;')();
 assert.equal(availableVideos.length, 30, 'Expected 30 linked Extra English episodes');
 assert.equal(new Set(availableVideos.map(x=>x.youtubeId)).size, 30, 'Video IDs must be unique');
+assert.deepEqual(availableVideos.filter(x=>x.driveId).map(x=>x.number), [1,2,3,4], 'Google Drive originals must be connected for episodes one to four');
+for(const ep of availableVideos.filter(x=>x.driveId))assert.ok(/^[A-Za-z0-9_-]{10,80}$/.test(ep.driveId));
 for (const entry of availableVideos) {
  assert.ok(/^[a-zA-Z0-9_-]{11}$/.test(entry.youtubeId), 'Bad YouTube ID: '+entry.number);
  assert.equal(entry.exercises.length, 3, 'Every episode should have three original teaching expressions');
