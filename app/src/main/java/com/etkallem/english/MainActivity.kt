@@ -159,6 +159,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     inner class VoiceBridge {
         @JavascriptInterface
+        fun playDriveEpisode(id: String, title: String) {
+            if (!Regex("^[A-Za-z0-9_-]{10,80}$").matches(id)) return
+            runOnUiThread {
+                val intent = Intent(this@MainActivity, VideoActivity::class.java)
+                intent.putExtra("drive_id", id)
+                intent.putExtra("video_title", title.take(100))
+                startActivity(intent)
+            }
+        }
+
+        @JavascriptInterface
         fun playEpisode(id: String, title: String) {
             if (!Regex("^[A-Za-z0-9_-]{11}$").matches(id)) return
             runOnUiThread {
