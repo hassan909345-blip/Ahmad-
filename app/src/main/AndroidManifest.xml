@@ -9,7 +9,7 @@
         </intent>
     </queries>
     <application
-        android:label="اتكلم برو - تصميم الشبكات"
+        android:label="اتكلم - المحادثات والمسلسلات"
         android:icon="@drawable/ic_launcher"
         android:roundIcon="@drawable/ic_launcher"
         android:allowBackup="true"
