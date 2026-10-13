@@ -159,6 +159,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     inner class VoiceBridge {
         @JavascriptInterface
+        fun openExternalTranscript(episode: Int) {
+            if (episode !in 1..4) return
+            runOnUiThread {
+                val url = Uri.parse("https://www.lingoclub.com/extra-english-episode-$episode")
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, url))
+                } catch (_: Exception) {
+                    android.widget.Toast.makeText(this@MainActivity,
+                        "تعذر فتح موقع النصوص على هذا الجهاز", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        @JavascriptInterface
         fun playDriveEpisode(id: String, title: String) {
             if (!Regex("^[A-Za-z0-9_-]{10,80}$").matches(id)) return
             runOnUiThread {
