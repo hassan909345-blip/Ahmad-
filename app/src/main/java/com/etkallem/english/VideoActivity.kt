@@ -56,7 +56,7 @@ class VideoActivity : Activity() {
         val episodeTitle = intent.getStringExtra("video_title")?.take(90) ?: "تعلم الإنجليزية بالفيديو"
 
         root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(248, 250, 253)) }
-        val scroller = ScrollView(this).apply { fillViewport = true }
+        val scroller = ScrollView(this).apply { isFillViewport = true }
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(10), dp(10), dp(10), dp(20))
