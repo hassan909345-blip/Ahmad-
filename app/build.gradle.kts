@@ -10,8 +10,8 @@ android {
         applicationId = "com.etkallem.english.dialogues"
         minSdk = 24
         targetSdk = 34
-        versionCode = 22
-        versionName = "2.2.0"
+        versionCode = 23
+        versionName = "2.3.0"
     }
 
     compileOptions {
