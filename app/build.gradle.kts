@@ -10,8 +10,8 @@ android {
         applicationId = "com.mashhadak.english.study4"
         minSdk = 24
         targetSdk = 34
-        versionCode = 25
-        versionName = "2.5.0"
+        versionCode = 26
+        versionName = "2.5.1"
     }
 
     compileOptions {
