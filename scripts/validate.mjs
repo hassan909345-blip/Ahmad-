@@ -6,6 +6,7 @@ const supplementary = readFileSync('app/src/main/assets/telecom-data.js', 'utf8'
 const stories = readFileSync('app/src/main/assets/stories-data.js', 'utf8');
 const importer = readFileSync('app/src/main/assets/importer.js', 'utf8');
 const episodeVideos = readFileSync('app/src/main/assets/series-episodes.js', 'utf8');
+const fourWorkbooks=readFileSync('app/src/main/assets/four-episode-workbooks.js','utf8');
 const availableVideos = new Function('const window = {};\n' + episodeVideos + '\nreturn window.MASHHADAK_EPISODES;')();
 assert.equal(availableVideos.length, 30, 'Expected 30 linked Extra English episodes');
 assert.equal(new Set(availableVideos.map(x=>x.youtubeId)).size, 30, 'Video IDs must be unique');
@@ -20,6 +21,7 @@ new Function('const window={};\n' + supplementary);
 new Function('const window={};\n' + stories);
 new Function('const window={};\n' + importer);
 new Function('const window={};\n' + episodeVideos);
+new Function('const window={};\n' + fourWorkbooks);
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(x => x[1]).filter(x => x.trim().length > 0);
 assert.ok(scripts.length >= 2, 'Expected course data and app scripts');
 for (const [index, script] of scripts.entries()) {
@@ -29,8 +31,16 @@ for (const [index, script] of scripts.entries()) {
     throw new Error('JavaScript syntax error in script ' + (index + 1) + ': ' + error.message);
   }
 }
-const info = new Function('const window={};\n' + supplementary + '\n' + stories + '\n' + scripts[0] + '\nreturn { total: ALL_PHRASES.length, lessons: LESSONS.length, phrases: ALL_PHRASES, telecom: TELECOM_LESSONS.length, extra: window.TELECOM_EXTRA.length, tracks: CAREER_TRACKS, ids: LESSONS.map(l=>l.id), stories: window.ETKALLEM_STORIES.length };')();
-assert.equal(info.total, 3000, 'Expected exactly 3000 lessons phrases');
+const info = new Function('const window={};\n' + supplementary + '\n' + stories + '\n' + fourWorkbooks + '\n' + scripts[0] + '\nreturn { total: ALL_PHRASES.length, lessons: LESSONS.length, phrases: ALL_PHRASES, telecom: TELECOM_LESSONS.length, extra: window.TELECOM_EXTRA.length, tracks: CAREER_TRACKS, ids: LESSONS.map(l=>l.id), stories: window.ETKALLEM_STORIES.length, workbooks: FOUR_EPISODE_WORKBOOKS, base: targetTotal };')();
+assert.equal(info.base, 3000, 'Expected exactly 3000 base phrases');
+assert.equal(info.total, 3160, 'Expected base phrases plus 160 original episode exercises');
+assert.equal(info.workbooks.length, 4, 'Expected four Drive episode workbooks');
+for(const [i,book] of info.workbooks.entries()) {
+ assert.equal(book.episode, i+1);
+ assert.equal(book.scenes.length, 8, 'Expected 8 scenes per episode');
+ assert.equal(book.scenes.reduce((n,s)=>n+s.lines.length,0),40,'Expected 40 phrases per episode');
+ assert.ok(info.ids.includes('extra_ep'+(i+1)), 'Missing full episode lesson');
+}
 assert.ok(info.telecom >= 12, 'Expected network design categories');
 assert.equal(info.extra, 6, 'Expected six extra telecom network design lessons');
 assert.equal(info.stories, 10, 'Expected ten original role-play episodes');
@@ -41,7 +51,7 @@ const keys = info.phrases.map(p => p.id);
 assert.equal(new Set(keys).size, keys.length, 'Expected unique phrase IDs');
 const unique = new Set(info.phrases.map(p => p.en.toLowerCase()));
 assert.ok(unique.size >= 2950, 'Expected diverse phrases');
-console.log('Verified:', info.total, 'phrases;', info.lessons, 'lessons;', info.telecom + info.extra, 'telecom modules; 4 professional tracks');
+console.log('Verified:', info.total, 'phrases including four episode workbooks;', info.lessons, 'lessons;', info.telecom + info.extra, 'telecom modules; 4 professional tracks');
 
 const p = new Function('const window={};\n' + importer + '\nreturn window.EtkallemImporter.parse;')();
 const srt = p('1\n00:00:01,000 --> 00:00:03,000\nA: Hello there!\n\n2\n00:00:03,000 --> 00:00:06,000\nB: How are you?', 'episode.srt');
