@@ -10,7 +10,7 @@
         </intent>
     </queries>
     <application
-        android:label="مشهدك - إنجليزي بالفيديو"
+        android:label="مشهدك - الأربع حلقات"
         android:icon="@drawable/ic_launcher"
         android:roundIcon="@drawable/ic_launcher"
         android:allowBackup="true"
