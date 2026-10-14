@@ -6,6 +6,9 @@ const supplementary = readFileSync('app/src/main/assets/telecom-data.js', 'utf8'
 const stories = readFileSync('app/src/main/assets/stories-data.js', 'utf8');
 const importer = readFileSync('app/src/main/assets/importer.js', 'utf8');
 const episodeVideos = readFileSync('app/src/main/assets/series-episodes.js', 'utf8');
+const verifiedSamples=readFileSync('app/src/main/assets/verified-excerpts.js','utf8');
+const snippets = new Function('const window={};\n'+verifiedSamples+'\nreturn window.MASHHADAK_VERIFIED_EXCERPTS;')();
+assert.equal(Object.values(snippets).reduce((n,a)=>n+a.length,0),43, 'Expected 43 validated subtitle excerpts from four videos');
 const fourWorkbooks=readFileSync('app/src/main/assets/four-episode-workbooks.js','utf8');
 const availableVideos = new Function('const window = {};\n' + episodeVideos + '\nreturn window.MASHHADAK_EPISODES;')();
 assert.equal(availableVideos.length, 30, 'Expected 30 linked Extra English episodes');
@@ -21,6 +24,7 @@ new Function('const window={};\n' + supplementary);
 new Function('const window={};\n' + stories);
 new Function('const window={};\n' + importer);
 new Function('const window={};\n' + episodeVideos);
+new Function('const window={};\n' + verifiedSamples);
 new Function('const window={};\n' + fourWorkbooks);
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(x => x[1]).filter(x => x.trim().length > 0);
 assert.ok(scripts.length >= 2, 'Expected course data and app scripts');
