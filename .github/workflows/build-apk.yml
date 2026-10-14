@@ -19,6 +19,13 @@ jobs:
       - run: /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - name: Check course data and scripts
         run: node scripts/validate.mjs
+      - name: Export real subtitle samples from user's four episodes
+        run: node scripts/export-samples.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mashhadak-Real-Subtitle-Previews
+          path: build/verified-excerpts/
+          if-no-files-found: error
       - run: gradle :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
